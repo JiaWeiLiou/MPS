@@ -60,16 +60,8 @@
     <CustomBuild Include="MPS.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="MPS.ui">
-      <Filter>Form Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="MPS.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="GeneratedFiles\ui_MPS.h">
-      <Filter>Generated Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
