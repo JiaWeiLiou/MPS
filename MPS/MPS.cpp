@@ -27,9 +27,8 @@ void MPS::initial()
 		int pos1 = fileName.lastIndexOf('/');
 		filePath = fileName.left(pos1 + 1);							//檔案路徑
 		fileName = fileName.right(fileName.size() - pos1 - 1);		//檔案名稱
-		fileName = QString(tr(" - ")) + fileName;
 	}
-	QString title = QString(tr("MPS")) + fileName;
+	QString title = QString(tr("MPS")) + QString(tr(" - ")) + fileName;
 	setWindowTitle(title);
 
 	/*read MPS points set*/
@@ -177,7 +176,43 @@ void MPS::mouseReleaseEvent(QMouseEvent *event)
 void MPS::keyPressEvent(QKeyEvent *event)
 {
 	// press keyboard Enter to output points file
-	if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return && imagePoints.size() > 4) {
+	if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) {
+		QVector<float> outAxis;
+		for (int i = 0; i < imagePoints.size(); i = i + 2) {
+			QPointF p1 = imagePoints[i];
+			if (imagePoints.size() != i + 1) {
+				QPointF p2 = imagePoints[i + 1];
+				outAxis.push_back(std::sqrt(std::pow(p1.x() - p2.x(), 2) + std::pow(p1.y() - p2.y(), 2)));
+			}
+		}
+
+		qSort(outAxis);
+
+		QFile file(filePath + "MPS(PSD).txt");
+		if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+			QTextStream out(&file);
+			out << dec << fixed;
+			out << fileName << ":\t";
+			for (size_t i = 0; i < outAxis.size(); ++i) {
+				out << outAxis[i];
+				if (i != outAxis.size() - 1) {
+					out << "\t";
+				}
+			}
+			out << endl;
+			file.close();
+		}
+
+// press keyboard Esc to give up setting point
+	} else if (event->key() == Qt::Key_Escape) {
+		imagePoints.clear();	// clear points
+		update();
+	// press keyboard Backspace to delete last point
+	} else if (event->key() == Qt::Key_Backspace) {
+		imagePoints.pop_back();	// clear points
+		update();
+	// press keyboard S to save points file
+	} else if (event->key() == Qt::Key_S) {
 		QFile file(filePath + "MPS(PT).txt");
 		if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
 			QTextStream out(&file);
@@ -187,14 +222,6 @@ void MPS::keyPressEvent(QKeyEvent *event)
 			}
 			file.close();
 		}
-	// press keyboard Esc to give up setting point
-	} else if (event->key() == Qt::Key_Escape) {
-		imagePoints.clear();	// clear points
-		update();
-	// press keyboard Backspace to delete last point
-	} else if (event->key() == Qt::Key_Backspace) {
-		imagePoints.pop_back();	// clear points
-		update();
 	}
 }
 
@@ -230,7 +257,7 @@ void MPS::paintEvent(QPaintEvent *event)
 	QRectF rect(newDelta.x() - 0.5 * scale, newDelta.y() - 0.5 * scale, imgW * scale, imgH * scale);	// draw range
 	painter.drawImage(rect, img);	// draw image
 
-									/* draw points and lines */
+	/* draw points and lines */
 	if (imagePoints.size() > 0) {
 		for (int i = 0; i < imagePoints.size(); i = i + 2) {
 			QPointF p1 = imagePoints[i] * scale + newDelta;

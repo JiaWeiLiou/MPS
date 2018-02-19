@@ -20,6 +20,10 @@
 #include <QString>
 #include <QFile>
 #include <QTextStream>
+#include <QtAlgorithms>
+#include <cmath>
+
+using namespace std;
 
 #define imgW (img.size().width())	// image width
 #define imgH (img.size().height())	// image height
