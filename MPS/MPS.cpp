@@ -16,8 +16,12 @@ MPS::MPS(QWidget *parent)
 
 void MPS::initial()
 {
+	/* set times */
+	times = 0;
+
 	/* clear imagePoints */
-	imagePoints.clear();
+	imagePointsS.clear();
+	imagePointsL.clear();
 
 	/* set maximum scale (maximum scale is 1/5 screen width) */
 	maxScale = QApplication::desktop()->screenGeometry().width() / 5;	// set maximum scale
@@ -32,16 +36,37 @@ void MPS::initial()
 	setWindowTitle(title);
 
 	/*read MPS points set*/
-	QFile file(filePath + "MPS(PT).txt");
-	if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-		QTextStream in(&file);
+	QFile fileS(filePath + "MPS_S(PT).txt");
+	if (fileS.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		QTextStream in(&fileS);
 		while (!in.atEnd()) {
 			QString line = in.readLine();
 			QStringList lineSplit = line.split("\t");
-			imagePoints.push_back(QPointF(lineSplit[0].toFloat(), lineSplit[1].toFloat()));
+			imagePointsS.push_back(QPointF(lineSplit[0].toFloat(), lineSplit[1].toFloat()));
 		}
 	}
-	file.close();
+	fileS.close();
+
+	QFile fileL(filePath + "MPS_L(PT).txt");
+	if (fileL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		QTextStream in(&fileL);
+		while (!in.atEnd()) {
+			QString line = in.readLine();
+			QStringList lineSplit = line.split("\t");
+			imagePointsL.push_back(QPointF(lineSplit[0].toFloat(), lineSplit[1].toFloat()));
+		}
+	}
+	fileL.close();
+
+	if ((imagePointsS.size() + imagePointsL.size()) % 4 == 0) {
+		times = 0;
+	} else if ((imagePointsS.size() + imagePointsL.size()) % 4 == 1) {
+		times = 1;
+	} else if ((imagePointsS.size() + imagePointsL.size()) % 4 == 2) {
+		times = 2;
+	} else {
+		times = 3;
+	}
 
 	/* calculate scale to show image */
 	float scaleW = (float)winW / (float)(imgW - 1);
@@ -129,7 +154,12 @@ void MPS::mousePressEvent(QMouseEvent *event)
 		// limit the point in the image
 		if (imagePos.x() >= 0 && imagePos.x() <= (imgW - 1) && imagePos.y() >= 0 && imagePos.y() <= (imgH - 1)) {
 			// record file.
-			imagePoints.push_back(imagePos);
+			if (times < 2) {
+				imagePointsL.push_back(imagePos);
+			} else {
+				imagePointsS.push_back(imagePos);
+			}
+			times = (times + 1) % 4;
 			outBorder = false;
 			update();
 		} else {
@@ -155,11 +185,19 @@ void MPS::mouseMoveEvent(QMouseEvent *event)
 			// record file.
 			// mousePress points is out of border 
 			if (outBorder) {
-				imagePoints.push_back(imagePos);
+				if (times < 2 && times > 0) {
+					imagePointsL.push_back(imagePos);
+				} else {
+					imagePointsS.push_back(imagePos);
+				}
 				outBorder = false;
 				// mousePress points isn't out of border 
 			} else {
-				imagePoints[imagePoints.size() - 1] = imagePos;
+				if (times < 2 && times > 0) {
+					imagePointsL[imagePointsL.size() - 1] = imagePos;
+				} else {
+					imagePointsS[imagePointsS.size() - 1] = imagePos;
+				}
 			}
 			update();
 		}
@@ -177,50 +215,99 @@ void MPS::keyPressEvent(QKeyEvent *event)
 {
 	// press keyboard Enter to output points file
 	if (event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return) {
-		QVector<float> outAxis;
-		for (int i = 0; i < imagePoints.size(); i = i + 2) {
-			QPointF p1 = imagePoints[i];
-			if (imagePoints.size() != i + 1) {
-				QPointF p2 = imagePoints[i + 1];
-				outAxis.push_back(std::sqrt(std::pow(p1.x() - p2.x(), 2) + std::pow(p1.y() - p2.y(), 2)));
+
+		QVector<float> outAxisS;
+		for (int i = 0; i < imagePointsS.size(); i = i + 2) {
+			QPointF p1 = imagePointsS[i];
+			if (imagePointsS.size() != i + 1) {
+				QPointF p2 = imagePointsS[i + 1];
+				outAxisS.push_back(std::sqrt(std::pow(p1.x() - p2.x(), 2) + std::pow(p1.y() - p2.y(), 2)));
 			}
 		}
+		qSort(outAxisS);
 
-		qSort(outAxis);
-
-		QFile file(filePath + "MPS(PSD).txt");
-		if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-			QTextStream out(&file);
+		QFile fileS(filePath + "MPS_S(PSD).txt");
+		if (fileS.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+			QTextStream out(&fileS);
 			out << dec << fixed;
 			out << fileName << ":\t";
-			for (size_t i = 0; i < outAxis.size(); ++i) {
-				out << outAxis[i];
-				if (i != outAxis.size() - 1) {
+			for (size_t i = 0; i < outAxisS.size(); ++i) {
+				out << outAxisS[i];
+				if (i != outAxisS.size() - 1) {
 					out << "\t";
 				}
 			}
 			out << endl;
-			file.close();
+			fileS.close();
+		}
+
+		QVector<float> outAxisL;
+		for (int i = 0; i < imagePointsL.size(); i = i + 2) {
+			QPointF p1 = imagePointsL[i];
+			if (imagePointsL.size() != i + 1) {
+				QPointF p2 = imagePointsL[i + 1];
+				outAxisL.push_back(std::sqrt(std::pow(p1.x() - p2.x(), 2) + std::pow(p1.y() - p2.y(), 2)));
+			}
+		}
+		qSort(outAxisL);
+
+		QFile fileL(filePath + "MPS_L(PSD).txt");
+		if (fileL.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+			QTextStream out(&fileL);
+			out << dec << fixed;
+			out << fileName << ":\t";
+			for (size_t i = 0; i < outAxisL.size(); ++i) {
+				out << outAxisL[i];
+				if (i != outAxisL.size() - 1) {
+					out << "\t";
+				}
+			}
+			out << endl;
+			fileL.close();
 		}
 
 // press keyboard Esc to give up setting point
 	} else if (event->key() == Qt::Key_Escape) {
-		imagePoints.clear();	// clear points
+		imagePointsS.clear();	// clear points
+		imagePointsL.clear();
+		times = 0;
 		update();
 	// press keyboard Backspace to delete last point
 	} else if (event->key() == Qt::Key_Backspace) {
-		imagePoints.pop_back();	// clear points
+		if (times == 0) {
+			times = 3;
+			imagePointsL.pop_back();	// clear points
+		} else if (times == 1) {
+			times = 0;
+			imagePointsL.pop_back();
+		} else if (times == 2) {
+			times = 1;
+			imagePointsS.pop_back();
+		} else if (times == 3) {
+			times = 2;
+			imagePointsS.pop_back();
+		}
 		update();
 	// press keyboard S to save points file
 	} else if (event->key() == Qt::Key_S) {
-		QFile file(filePath + "MPS(PT).txt");
-		if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-			QTextStream out(&file);
+		QFile fileS(filePath + "MPS_S(PT).txt");
+		if (fileS.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+			QTextStream out(&fileS);
 			out << dec << fixed;
-			for (int i = 0; i < imagePoints.size(); ++i) {
-				out << imagePoints[i].x() << "\t" << imagePoints[i].y() << endl;
+			for (int i = 0; i < imagePointsS.size(); ++i) {
+				out << imagePointsS[i].x() << "\t" << imagePointsS[i].y() << endl;
 			}
-			file.close();
+			fileS.close();
+		}
+
+		QFile fileL(filePath + "MPS_L(PT).txt");
+		if (fileL.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+			QTextStream out(&fileL);
+			out << dec << fixed;
+			for (int i = 0; i < imagePointsL.size(); ++i) {
+				out << imagePointsL[i].x() << "\t" << imagePointsL[i].y() << endl;
+			}
+			fileL.close();
 		}
 	}
 }
@@ -258,18 +345,36 @@ void MPS::paintEvent(QPaintEvent *event)
 	painter.drawImage(rect, img);	// draw image
 
 	/* draw points and lines */
-	if (imagePoints.size() > 0) {
-		for (int i = 0; i < imagePoints.size(); i = i + 2) {
-			QPointF p1 = imagePoints[i] * scale + newDelta;
+	if (imagePointsL.size() > 0) {
+		for (int i = 0; i < imagePointsL.size(); i = i + 2) {
+			QPointF p1 = imagePointsL[i] * scale + newDelta;
 			painter.setPen(QPen(Qt::red, 5));
 			painter.drawPoint(p1);
-			if (imagePoints.size() != i + 1) {
-				QPointF p2 = imagePoints[i + 1] * scale + newDelta;
+			if (imagePointsL.size() != i + 1) {
+				QPointF p2 = imagePointsL[i + 1] * scale + newDelta;
 				/* draw line to lower level*/
 				painter.setPen(QPen(Qt::green, 3));
 				painter.drawLine(p1, p2);
 				/* draw point to upper level */
-				painter.setPen(QPen(Qt::red, 5));
+				painter.setPen(QPen(Qt::red, 4));
+				painter.drawPoint(p1);
+				painter.drawPoint(p2);
+			}
+		}
+	}
+
+	if (imagePointsS.size() > 0) {
+		for (int i = 0; i < imagePointsS.size(); i = i + 2) {
+			QPointF p1 = imagePointsS[i] * scale + newDelta;
+			painter.setPen(QPen(Qt::red, 5));
+			painter.drawPoint(p1);
+			if (imagePointsS.size() != i + 1) {
+				QPointF p2 = imagePointsS[i + 1] * scale + newDelta;
+				/* draw line to lower level*/
+				painter.setPen(QPen(Qt::blue, 3));
+				painter.drawLine(p1, p2);
+				/* draw point to upper level */
+				painter.setPen(QPen(Qt::red, 4));
 				painter.drawPoint(p1);
 				painter.drawPoint(p2);
 			}

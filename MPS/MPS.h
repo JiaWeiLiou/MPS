@@ -60,8 +60,10 @@ private:
 	QPointF oldDelta;		// old displacement
 	QPointF pos1;			// mouse press position 1
 	QPointF pos2;			// mouse press position 2
-	QVector<QPointF> imagePoints;	// record image points' pixel
+	QVector<QPointF> imagePointsS;	// record short image points' pixel
+	QVector<QPointF> imagePointsL;	// record long image points' pixel
 	bool outBorder;			// record point is out of border or not
+	int times;				// record first or second axis
 };
 
 #endif MPS_H
