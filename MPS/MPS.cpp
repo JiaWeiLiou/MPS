@@ -185,7 +185,7 @@ void MPS::mouseMoveEvent(QMouseEvent *event)
 			// record file.
 			// mousePress points is out of border 
 			if (outBorder) {
-				if (times < 2 && times > 0) {
+				if (times < 3 && times > 0) {
 					imagePointsL.push_back(imagePos);
 				} else {
 					imagePointsS.push_back(imagePos);
@@ -193,7 +193,7 @@ void MPS::mouseMoveEvent(QMouseEvent *event)
 				outBorder = false;
 				// mousePress points isn't out of border 
 			} else {
-				if (times < 2 && times > 0) {
+				if (times < 3 && times > 0) {
 					imagePointsL[imagePointsL.size() - 1] = imagePos;
 				} else {
 					imagePointsS[imagePointsS.size() - 1] = imagePos;
@@ -276,13 +276,13 @@ void MPS::keyPressEvent(QKeyEvent *event)
 	} else if (event->key() == Qt::Key_Backspace) {
 		if (times == 0) {
 			times = 3;
-			imagePointsL.pop_back();	// clear points
+			imagePointsS.pop_back();	// clear points
 		} else if (times == 1) {
 			times = 0;
 			imagePointsL.pop_back();
 		} else if (times == 2) {
 			times = 1;
-			imagePointsS.pop_back();
+			imagePointsL.pop_back();
 		} else if (times == 3) {
 			times = 2;
 			imagePointsS.pop_back();
